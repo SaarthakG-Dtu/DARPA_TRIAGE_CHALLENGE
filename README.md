@@ -1,101 +1,271 @@
+# Motor Alertness Detection (DARPA Triage Challenge)
 
-Motor Alertness Detection (DARPA Triage Challenge)
-<img width="1000" height="750" alt="image" src="https://github.com/user-attachments/assets/0e01f5f8-78ac-445b-af6d-2dd32073da7d" />
+![UGV with LiDAR and Depth Camera](https://github.com/user-attachments/assets/0e01f5f8-78ac-445b-af6d-2dd32073da7d)
 
-DTU with Blickfeld LiDAR at DARPA Triage Challenge Figure: UGV platform with a 3D LiDAR sensor and depth camera used for patient monitoring. This system uses LiDAR point clouds and depth-camera data to detect patient movements (e.g. leg twitches) non-invasively. We combine sensor fusion, YOLO-based segmentation, and deep learning to classify alertness. Key components include data acquisition, segmentation, feature extraction, and inference (see sections below).
-Setup & Requirements
+**DTU with Blickfeld LiDAR at DARPA Triage Challenge**  
+*UGV platform with a 3D LiDAR sensor and depth camera used for patient monitoring.*
 
-    Clone the repo:
+This system detects patient motor alertness (e.g., leg twitches) non-invasively using:
+- LiDAR point clouds
+- Depth camera streams
+- YOLOv8 segmentation
+- Temporal feature extraction
+- Deep learning classification
 
-    bash
+The pipeline combines sensor fusion, tracking, and neural inference to classify alertness in real-time triage scenarios.
 
-    git clone https://github.com/SaarthakG-Dtu/DARPA_TRIAGE_CHALLENGE.git
-    cd DARPA_TRIAGE_CHALLENGE
+---
 
-    Install dependencies: Python 3.8+ is required. Install libraries with:
+## 📦 Setup & Requirements
 
-    bash
+### 1. Clone the Repository
+```bash
+git clone https://github.com/SaarthakG-Dtu/DARPA_TRIAGE_CHALLENGE.git
+cd DARPA_TRIAGE_CHALLENGE
 
-    pip install -r requirements.txt
+2. Install Dependencies
 
-    Key packages: PyTorch, OpenCV, NumPy, Open3D, ROS (for depth bag processing).
-    Hardware: A Linux PC (Ubuntu 20.04) with an NVIDIA GPU (e.g. Jetson, RTX) is recommended. The robot needs a 3D LiDAR (e.g. Blickfeld or Ouster) and a depth camera (e.g. Kinect/RealSense). For depth pipeline, ROS Noetic should be installed to handle bag files.
+    Python 3.8+ is required
 
-LiDAR Pipeline (Lidar_Motor_alertness)
+pip install -r requirements.txt
 
-    Preprocessing:
-    The script pcd_image_extract.py converts raw LiDAR .pcd files into 2D depth images (projecting the 3D scan onto an image plane). This yields depth frames that capture the geometry around the person.
-    Segmentation & Cropping:
-    We run a YOLOv8 instance segmentation on the UGV’s camera image to isolate the person. From the mask, we compute the pixel centroid and convert it to an angular bearing relative to the camera. LiDAR points whose azimuth lies within a narrow window of this bearing are selected – effectively cropping the point cloud around the casualty. We then cluster these points and take the nearest cluster centroid as the person’s 3D position.
-    Motion Tracking:
-    run_alltracker.py processes the cropped depth images to detect and track the person’s movement. It applies clustering or optical flow methods frame-by-frame to follow limbs.
-    Feature Extraction:
-    final_features.py takes the tracked points and computes temporal features (e.g. displacements, velocities, variance). We stack features over a short time window (e.g. several frames) to form the model input. Stacked temporal features capture motion history.
-    Classification:
-    inference_final.py loads these feature stacks and applies a trained neural network (best_model_checkpoint.pth) to classify the movement (e.g. left-leg twitch, right-leg twitch, no-motion).
+Key Packages
 
-A helper script automates this flow:
+    PyTorch
 
-bash
+    OpenCV
+
+    NumPy
+
+    Open3D
+
+    ROS (for depth bag processing)
+
+Hardware Requirements
+
+    Linux PC (Ubuntu 20.04 / 22.04 recommended)
+
+    NVIDIA GPU (Jetson / RTX preferred for real-time inference)
+
+    3D LiDAR (Blickfeld / Ouster)
+
+    Depth Camera (Kinect / Intel RealSense)
+
+    ROS Noetic (for .bag file processing)
+
+🚀 LiDAR Pipeline (Lidar_Motor_alertness)
+1. Preprocessing
+
+pcd_image_extract.py converts raw LiDAR .pcd files into 2D depth images by projecting 3D scans onto an image plane.
+This generates depth frames representing the surrounding geometry.
+2. Segmentation & Cropping
+
+    YOLOv8 instance segmentation is applied on the RGB camera feed.
+
+    The human mask centroid is computed.
+
+    The centroid is converted into an angular bearing.
+
+    LiDAR points within a narrow azimuth window are selected.
+
+    Clustering is applied to isolate the casualty.
+
+    The nearest cluster centroid is treated as the person’s 3D position.
+
+3. Motion Tracking
+
+run_alltracker.py tracks movement frame-by-frame using:
+
+    Clustering
+
+    Optical flow techniques
+    This allows detection of subtle limb movements like twitches.
+
+4. Feature Extraction
+
+final_features.py computes temporal motion features:
+
+    Displacements
+
+    Velocities
+
+    Variance
+
+    Motion history (stacked frame features)
+
+Feature stacks over short time windows form the model input tensor.
+5. Classification
+
+inference_final.py loads:
+
+    Feature stacks
+
+    best_model_checkpoint.pth
+
+The neural network classifies movements such as:
+
+    Left leg twitch
+
+    Right leg twitch
+
+    No motion
+
+Run Full LiDAR Pipeline
 
 cd Lidar_Motor_alertness
 bash Lidar_inference.sh
 
-This shell script calls the above steps in order (preprocess → segment → track → features → inference).
-Depth-Camera Pipeline (Depthcam_motor_alertness)
+This script automates:
 
-    Bag Processing:
-    process_bag.py reads a ROS .bag file and extracts color+depth frames. The depth frames (with skeleton or point data) will be used for motion analysis.
-    Motion Tracking:
-    run_alltracker.py tracks the person in the depth-video frames using pose estimation or optical-flow. The result is a sequence of tracked points/poses.
-    Feature Extraction:
-    final_features.py computes the same type of temporal features from the depth stream (e.g. pixel-shift features, joint velocities). Frames are stacked over time to produce feature vectors.
-    Classification:
-    inference_final.py uses the same trained model to classify the depth-based feature stacks.
+Preprocess → Segment → Track → Feature Extraction → Inference
 
-Run it with:
+🎥 Depth Camera Pipeline (Depthcam_motor_alertness)
+1. Bag Processing
 
-bash
+process_bag.py extracts:
+
+    RGB frames
+
+    Depth frames
+    from ROS .bag files.
+
+2. Motion Tracking
+
+run_alltracker.py tracks the person using:
+
+    Pose estimation
+
+    Optical flow on depth frames
+
+3. Feature Extraction
+
+final_features.py computes temporal features including:
+
+    Pixel displacement
+
+    Joint velocities
+
+    Motion variance
+
+Frames are stacked over time to generate feature vectors.
+4. Classification
+
+inference_final.py applies the trained model to classify motor alertness using depth-based feature stacks.
+Run Full Depth Pipeline
 
 cd Depthcam_motor_alertness
 bash motor_alertness.sh
 
-This executes the pipeline (bag processing → tracking → features → inference).
-Features & Model Training
+Pipeline flow:
 
-    Feature Engineering: We use stacked temporal features. Each input to the model is a tensor representing several consecutive frames, capturing the dynamics of movement. Clustering utilities (cluster.py, cluster_var.py) preprocess the training data to group similar motion and calculate variances, enhancing feature robustness.
-    Model: The model is a supervised neural network (e.g. a 1D-CNN) implemented in PyTorch. Training is done in Training_logic/Twitching.ipynb, which loads the .npy feature stacks and label data (labels.npy), defines the network, and trains it. The best-performing weights are saved as best_model_checkpoint.pth.
-    YOLO Usage: We specifically use a YOLOv8-based segmentation model to detect and mask the human in the RGB image. This segmentation guides the LiDAR cropping (as described above) and ensures that features focus on the person. (YOLO is fine-tuned on casualty imagery similar to past DARPA work.)
+Bag Processing → Tracking → Feature Extraction → Inference
 
-During training, the dataset includes both twitch and non-twitch scenarios. The model learns to distinguish subtle movement patterns. In line with related systems, a high accuracy is achieved by focusing on these temporal features.
-Running the System
+🧠 Features & Model Training
+Feature Engineering
 
-    LiDAR Flow:
+    Stacked temporal feature tensors
 
-    bash
+    Captures motion dynamics across consecutive frames
 
-    cd Lidar_Motor_alertness
-    bash Lidar_inference.sh
+    Robust clustering via:
 
-    This will process all .pcd scans in the input folder and output detected alerts (e.g., “Right leg twitch at t=12.3s”).
+        cluster.py
 
-    Depth Flow:
+        cluster_var.py
 
-    bash
+These utilities group similar motion patterns and compute variance for improved robustness.
+Model Architecture
 
-    cd Depthcam_motor_alertness
-    bash motor_alertness.sh
+    Supervised Neural Network (1D-CNN based)
 
-    This processes provided ROS bag file(s) and prints movement detections.
+    Implemented in PyTorch
 
-    Retraining (optional):
-    Open Training_logic/Twitching.ipynb and follow the cells to retrain on new data. Ensure labels.npy and feature .npy files are prepared. After training, use the new best_model_checkpoint.pth for inference.
-![Uploading image.png…]()
+    Trained on temporal motion feature stacks
 
-DARPA Figure: UGVs (Spot robots) with sensors at a DARPA Triage demonstration. Our system is designed for such scenarios, autonomously detecting and reporting patient movements.
-System Notes
+Training notebook:
 
-    Environment: Tested on Ubuntu 22.04 with ROS Noetic (for depth bags) and Python 3.8. An NVIDIA GPU is needed for real-time inference.
-    Sensor Calibration: Camera intrinsics and extrinsics must be set correctly. The YOLO segmentation assumes a calibrated camera to convert mask pixels into angles.
-    Point Mapping: For each segmented person, we map 2D mask centroids to 3D points by selecting LiDAR points at the corresponding azimuth. Clustering those points yields a precise 3D location for the person. This integration of vision (YOLO) and LiDAR segmentation is key to our pipeline.
+Training_logic/Twitching.ipynb
 
+Training Workflow
+
+    Load .npy feature stacks
+
+    Load labels.npy
+
+    Train model
+
+    Save best weights as:
+
+best_model_checkpoint.pth
+
+Dataset includes:
+
+    Twitch scenarios
+
+    Non-twitch scenarios
+    allowing the model to learn subtle movement distinctions.
+
+🧪 Running the System
+LiDAR Flow
+
+cd Lidar_Motor_alertness
+bash Lidar_inference.sh
+
+Outputs example:
+
+Right leg twitch detected at t = 12.3s
+
+Depth Camera Flow
+
+cd Depthcam_motor_alertness
+bash motor_alertness.sh
+
+Processes ROS bag files and prints detected movements.
+Retraining (Optional)
+
+    Open:
+
+Training_logic/Twitching.ipynb
+
+    Prepare:
+
+        labels.npy
+
+        Feature .npy files
+
+    Train and replace:
+
+best_model_checkpoint.pth
+
+⚙️ System Notes
+Environment
+
+    Tested on Ubuntu 22.04
+
+    ROS Noetic (for depth pipeline)
+
+    Python 3.8+
+
+    NVIDIA GPU recommended for real-time inference
+
+Sensor Calibration
+
+    Camera intrinsics & extrinsics must be calibrated
+
+    Required for accurate centroid-to-angle conversion
+
+    Ensures correct LiDAR cropping using YOLO masks
+
+Vision–LiDAR Mapping
+
+For each segmented human:
+
+    Convert 2D mask centroid → angular bearing
+
+    Select LiDAR points within that azimuth window
+
+    Apply clustering
+
+    Extract precise 3D person location
+
+This fusion of YOLO segmentation and LiDAR spatial filtering is the core innovation of the pipeline.

@@ -1,4 +1,6 @@
 # Motor Alertness Detection using LiDAR & Depth Camera (AllTracker Pipeline)
+<img width="1000" height="750" alt="image" src="https://github.com/user-attachments/assets/7aff4af4-bb36-4514-9ed6-5558f4ebebfd" /> 
+*Figure: UGV platform with a 3D LiDAR sensor and depth camera used for patient monitoring.* This system uses LiDAR point clouds and depth-camera data to detect patient movements (e.g. leg twitches) non-invasively. We combine sensor fusion, YOLO-based segmentation, and deep learning to classify alertness. Key components include data acquisition, segmentation, feature extraction, and inference (see sections below)
 
 This repository implements a dual-pipeline motor alertness detection
 system designed for mass casualty and triage scenarios. The system
@@ -229,16 +231,11 @@ Both scripts automate: Preprocessing → Nearest Person Selection →
 Tracking → Feature Extraction → Inference
 
 ------------------------------------------------------------------------
+## System Notes -
+**Environment:** Tested on Ubuntu 20.04 with ROS Noetic (for depth bags) and Python 3.8. An NVIDIA GPU is needed for real-time inference【30†L165-L170】. - 
+**Sensor Calibration:** Camera intrinsics and extrinsics must be set correctly. The YOLO segmentation assumes a calibrated camera to convert mask pixels into angles. - 
+**Point Mapping:** For each segmented person, we map 2D mask centroids to 3D points by selecting LiDAR points at the corresponding azimuth. Clustering those points yields a precise 3D location for the person【53†L368-L377】. This integration of vision (YOLO) and LiDAR segmentation is key to our pipeline.
 
-## System Notes
-
--   Designed for single priority casualty monitoring
--   GPU strongly recommended for dense tracking and inference
--   Accurate sensor calibration (camera--LiDAR alignment) improves
-    performance
--   Pretrained YOLOv8 segmentation is used (not custom trained)
--   Dense pixel tracking (AllTracker) is computationally intensive but
-    enables fine motion detection
-
-This repository is structured for research-grade triage, robotics
-perception, and non-contact motor monitoring applications.
+## Citation
+If using this work in research:
+AllTracker (Dense Pixel Tracking) — arXiv:2506.07310
